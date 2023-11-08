@@ -1,0 +1,14 @@
+version: '3'
+services:
+  app:
+    container_name: python
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    tty: true
+    volumes:
+      - .:/app
+#      - your credential:/your credential
+    environment:
+      - TZ=Asia/Tokyo
+      
