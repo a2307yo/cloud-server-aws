@@ -3,12 +3,9 @@ import json
 import base64
 import requests # Add layer
 
-
 print('Loading function')
 
 # --------------- Helper Functions ------------------
-
-
 
 def detect_label_binary(image_binary):
     rekognition = boto3.client('rekognition')
