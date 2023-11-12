@@ -103,14 +103,14 @@ def lambda_handler(event, context):
     try:
         # API Gatewayからのリクエストボディを取得
         request_body = json.loads(event['body'])
-        image_file = request_body.get('image_file')
-        image_bin = request_body.get('image')
-        image_data = base64.b64decode(image_bin)
-        cuisineType = request_body.get('cuisineType')
-        mealType = request_body.get('mealType')
-        dishType = request_body.get('dishType')
+        image_body = request_body.get('image')
+        image_bin = base64.b64decode(image_body)
+        cuisine_type = request_body.get('cuisineType')
+        meal_type = request_body.get('mealType')
+        dish_type = request_body.get('dishType')
 
         # 画像をS3にアップロードする
+        # image_file = request_body.get('image_file')
         # s3_bucket = "menu-suggestion-group1"
         # s3_key = "images/"
         # upload_imag_S3(s3_bucket, s3_key, image_file, image_data)
@@ -119,7 +119,7 @@ def lambda_handler(event, context):
         labels = detect_label(image_bin)
         
         # レシピAPIからレスポンスを取得する
-        respons = get_resipes(labels, cuisineType, mealType, dishType)
+        respons = get_resipes(labels, cuisine_type, meal_type, dish_type)
         
         recipes = respons["hits"]
         for i, recipe in enumerate(recipes):
@@ -135,7 +135,7 @@ def lambda_handler(event, context):
     except Exception as e:
         raise e
 
-if __name__ == '__main__':
-    resp = get_resipes("chikin")
-    print(resp)
+# if __name__ == '__main__':
+#     resp = get_resipes("chikin")
+#     print(resp)
 
