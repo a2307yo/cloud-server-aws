@@ -7,28 +7,7 @@ import requests # Add layer
 print('Loading function')
 
 # --------------- Helper Functions ------------------
-def upload_imag_S3(s3_bucket, s3_key, image_file, image_data):
-    s3 = boto3.client('s3')
-    s3.put_object(
-        Bucket=s3_bucket,
-        Key=s3_key + image_file,  # アップロード後のオブジェクトキー
-        Body=image_data,
-        ContentType='image/png'  # 画像のコンテントタイプを適切なものに変更
-    )
-    return
 
-
-def detect_label(bucket, image):
-    rekognition = boto3.client('rekognition')
-    labels = rekognition.detect_labels(
-        Image={'S3Object':{'Bucket':bucket,'Name':image}},
-        MaxLabels=10,
-        Features=["GENERAL_LABELS", "IMAGE_PROPERTIES"],
-        Settings={
-            "GeneralLabels": {"LabelInclusionFilters":["Food and Beverage"]}
-        }
-    )
-    return labels
 
 
 def detect_label_binary(image_binary):
@@ -108,15 +87,9 @@ def lambda_handler(event, context):
         cuisine_type = request_body.get('cuisineType')
         meal_type = request_body.get('mealType')
         dish_type = request_body.get('dishType')
-
-        # 画像をS3にアップロードする
-        # image_file = request_body.get('image_file')
-        # s3_bucket = "menu-suggestion-group1"
-        # s3_key = "images/"
-        # upload_imag_S3(s3_bucket, s3_key, image_file, image_data)
         
         # 画像から食材を検出する
-        labels = detect_label(image_bin)
+        labels = detect_label_binary(image_bin)
         
         # レシピAPIからレスポンスを取得する
         respons = get_resipes(labels, cuisine_type, meal_type, dish_type)
@@ -134,8 +107,4 @@ def lambda_handler(event, context):
         }       
     except Exception as e:
         raise e
-
-# if __name__ == '__main__':
-#     resp = get_resipes("chikin")
-#     print(resp)
 
