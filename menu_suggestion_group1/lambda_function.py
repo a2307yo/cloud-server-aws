@@ -5,22 +5,32 @@ import requests # Add layer
 
 print('Loading function')
 
-# --------------- Helper Functions ------------------
+s3 = boto3.client('s3')
+translate = boto3.client('translate')
+rekognition = boto3.client('rekognition')
 
-def detect_label_binary(image_binary):
-    rekognition = boto3.client('rekognition')
+# --------------- Helper Functions ------------------
+def upload_imag_S3(s3_bucket, s3_key, image_file, image_data):
+    s3.put_object(
+        Bucket=s3_bucket,
+        Key=s3_key + image_file,  # アップロード後のオブジェクトキー
+        Body=image_data,
+        ContentType='image/jpg'  # 画像のコンテントタイプを適切なものに変更
+    )
+    return
+
+
+def detect_label(bucket, image):
     labels = rekognition.detect_labels(
-        Image={'Bytes':image_binary},
+        Image={'S3Object':{'Bucket':bucket,'Name':image}},
         MaxLabels=10,
-        Features=["GENERAL_LABELS", "IMAGE_PROPERTIES"],
-        Settings={
-            "GeneralLabels": {"LabelInclusionFilters":["Food and Beverage"]}
-        }
+        Features=["GENERAL_LABELS"],
+        Settings={"GeneralLabels": {"LabelCategoryInclusionFilters":["Food and Beverage"]}},
     )
     return labels
 
 
-def get_resipes(keyword, cuisineType=None, mealType=None, dishType=None):
+def get_resipes(keyword, cuisineType="", mealType="", dishType=""):
     # Web APIのURL
     api_url = "https://api.edamam.com/api/recipes/v2"
 
@@ -35,10 +45,13 @@ def get_resipes(keyword, cuisineType=None, mealType=None, dishType=None):
         "app_id": "57fe55de",
         "app_key": "6e8e01d0eb4e2633ee5f223561c9c325",
         "q": keyword,
-        "cuisineType": cuisineType,
-        "mealType": mealType,
-        "dishType": dishType,
     }
+    if cuisineType:
+        params["cuisineType"] = cuisineType
+    if mealType:
+        params["mealType"] = mealType
+    if dishType:
+        params["dishType"] = dishType
 
     try:
         # 外部のWeb APIを呼び出し
@@ -60,15 +73,14 @@ def get_resipes(keyword, cuisineType=None, mealType=None, dishType=None):
 
 def translate_text(text_list, source_language="en", target_language="ja"):
     text = ' _ '.join(text_list)
-    translate = boto3.client('translate')
     response = translate.translate_text(
         Text=text,
         SourceLanguageCode=source_language,
         TargetLanguageCode=target_language
     )
-    translated_list = response['TranslatedText']
-    return translated_list.split(' _ ')
-
+    # translated_list = response['TranslatedText']
+    # return translated_list.split(' _ ')
+    return respons
 
 # --------------- Main handler ------------------
 def lambda_handler(event, context):
@@ -84,20 +96,36 @@ def lambda_handler(event, context):
         cuisine_type = request_body.get('cuisineType')
         meal_type = request_body.get('mealType')
         dish_type = request_body.get('dishType')
+
+        # 画像をS3にアップロードする
+        s3_bucket = "menu-suggestion-group1"
+        s3_key = "images/"
+        image_file = "image.jpg"
+        upload_imag_S3(s3_bucket, s3_key, image_file, image_bin)
         
-        # 画像から食材を検出する
-        labels = detect_label_binary(image_bin)
-        
+        # # 画像から食材を検出する
+        labels = detect_label(s3_bucket, s3_key+image_file)
+        label_names = [label['Name'] for label in labels['Labels']]
+        label_names = ' '.join(label_names)
+
+        print(label_names)
+        print(cuisine_type)
+        print(meal_type)
+        print(dish_type)
+        labels = "chicken" #test#
         # レシピAPIからレスポンスを取得する
         respons = get_resipes(labels, cuisine_type, meal_type, dish_type)
         
-        recipes = respons["hits"]
-        for i, recipe in enumerate(recipes):
-            ingredientLines = recipe["ingredientLines"]
+        hits = respons["hits"]
+        for i, hit in enumerate(hits):
+            ingredientLines = hit["recipe"]["ingredientLines"]
             # レシピを日本語に翻訳する
-            ingredientLines_ja = translate_text(ingredientLines)
-            respons["hits"][i]["recipe"]["ingredientLines"] = ingredientLines_ja
+            # ingredientLines_ja = translate_text(ingredientLines)
+            # respons["hits"][i]["recipe"]["ingredientLines"] = ingredientLines_ja
         
+        tmp = s3_key+image_file
+        s3 = boto3.client('s3')
+        s3.delete_object(Bucket=s3_bucket, Key=tmp)
         return {
             'statusCode': 200,
             'body': json.dumps(respons)
