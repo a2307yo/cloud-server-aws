@@ -44,7 +44,7 @@ def detect_label_binary(image_binary):
     return labels
 
 
-def get_resipes(keyword, cuisineType, mealType, dishType):
+def get_resipes(keyword, cuisineType=None, mealType=None, dishType=None):
     # Web APIのURL
     api_url = "https://api.edamam.com/api/recipes/v2"
 
