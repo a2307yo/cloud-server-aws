@@ -90,7 +90,11 @@ def lambda_handler(event, context):
 
     try:
         # API Gatewayからのリクエストボディを取得
-        request_body = json.loads(event['body'])
+        request_body = event['body']
+        if isinstance(request_body, str):
+            request_body = json.loads(request_body)
+        
+        # request_body = json.loads(event['body'])
         image_body = request_body.get('image')
         image_bin = base64.b64decode(image_body)
         cuisine_type = request_body.get('cuisineType')
@@ -120,8 +124,8 @@ def lambda_handler(event, context):
         for i, hit in enumerate(hits):
             ingredientLines = hit["recipe"]["ingredientLines"]
             # レシピを日本語に翻訳する
-            # ingredientLines_ja = translate_text(ingredientLines)
-            # respons["hits"][i]["recipe"]["ingredientLines"] = ingredientLines_ja
+            ingredientLines_ja = translate_text(ingredientLines)
+            respons["hits"][i]["recipe"]["ingredientLines"] = ingredientLines_ja
         
         tmp = s3_key+image_file
         s3 = boto3.client('s3')
