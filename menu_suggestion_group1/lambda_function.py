@@ -78,9 +78,9 @@ def translate_text(text_list, source_language="en", target_language="ja"):
         SourceLanguageCode=source_language,
         TargetLanguageCode=target_language
     )
-    # translated_list = response['TranslatedText']
-    # return translated_list.split(' _ ')
-    return respons
+    translated_list = response['TranslatedText']
+    return translated_list.split(' _ ')
+    # return respons
 
 # --------------- Main handler ------------------
 def lambda_handler(event, context):
@@ -90,7 +90,8 @@ def lambda_handler(event, context):
 
     try:
         # API Gatewayからのリクエストボディを取得
-        request_body = event['body']
+        # request_body = event['body']
+        request_body = event
         if isinstance(request_body, str):
             request_body = json.loads(request_body)
         
@@ -116,23 +117,24 @@ def lambda_handler(event, context):
         print(cuisine_type)
         print(meal_type)
         print(dish_type)
-        labels = "chicken" #test#
+        # labels = "chicken" #test#
         # レシピAPIからレスポンスを取得する
-        respons = get_resipes(labels, cuisine_type, meal_type, dish_type)
+        response = get_resipes(labels, cuisine_type, meal_type, dish_type)
         
-        hits = respons["hits"]
+        hits = response["hits"]
         for i, hit in enumerate(hits):
             ingredientLines = hit["recipe"]["ingredientLines"]
             # レシピを日本語に翻訳する
             ingredientLines_ja = translate_text(ingredientLines)
-            respons["hits"][i]["recipe"]["ingredientLines"] = ingredientLines_ja
+            response["hits"][i]["recipe"]["ingredientLines"] = ingredientLines_ja
         
         tmp = s3_key+image_file
         s3 = boto3.client('s3')
         s3.delete_object(Bucket=s3_bucket, Key=tmp)
+        print(response)
         return {
             'statusCode': 200,
-            'body': json.dumps(respons)
+            'body': json.dumps(response)
         }       
     except Exception as e:
         raise e
